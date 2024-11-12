@@ -779,7 +779,7 @@ class Listener {
           const tok_parts = authtok.decodeToken(bearertoken[1]);
           // Get CloudFlare Zone ID
           try {
-            zone_id = tok_parts.aud || DNS01CF.config.CF_ZONE_ID || (await CFAPI.getZoneByName(json.fqdn));
+            zone_id = tok_parts.aud || DNS01CF.config.CF_ZONE_ID || (await CFAPI.getZoneByName(json.fqdn)).id;
           } catch (e) {
             return dns01cfError(`Unable to list zones: ${e.message}`, { status: 500 });
           }
@@ -848,7 +848,7 @@ class Listener {
       // Get CloudFlare Zone ID
       let zone_id;
       try {
-        zone_id = tok_parts.aud || DNS01CF.config.CF_ZONE_ID || (await CFAPI.getZoneByName(json.subdomain));
+        zone_id = tok_parts.aud || DNS01CF.config.CF_ZONE_ID || ((await CFAPI.getZoneByName(json.subdomain)).id);
       } catch (e) {
         return dns01cfError(`Unable to list zones: ${e.message}`, { status: 500 });
       }
