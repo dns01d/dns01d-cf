@@ -862,12 +862,18 @@ class Listener {
       try {
         actres = await CFAPI.setRecord(zone_id, json.subdomain, json.txt);
       } catch (e) {
-        return dns01cfError(`Error during DNS update: ${e.message}`, { status: 500 });
+        if (e.message.includes("An identical record already exists")) {
+          // it's a duplicate, so we'll just return success
+          actres = { message: e.message };
+        } else {
+          return dns01cfError(`Error during DNS update: ${e.message}`, { status: 500 });
+        }
       }
       return dns01cfResponse(
         {
           result: "ok",
           message: `'${json.subdomain}' set to value '${json.txt}'`,
+          acmedns_success_msg: `${json.txt}`,
           response: actres,
         },
         { status: 200 },
