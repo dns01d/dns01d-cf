@@ -392,7 +392,7 @@ class CFAPI {
   static async getZoneByName(name, exactMatch = false) {
     const zones = await CFAPI.listZones();
     for (let zone of zones) {
-      if ((exactMatch && name === zone.name) || !exactMatch || name.endsWith(zone.name))
+      if ((exactMatch && name === zone.name) || (!exactMatch && name.endsWith(zone.name)))
         return { id: zone.id, name: zone.name };
     }
     return null;
@@ -779,7 +779,7 @@ class Listener {
           const tok_parts = authtok.decodeToken(bearertoken[1]);
           // Get CloudFlare Zone ID
           try {
-            zone_id = tok_parts.aud || DNS01CF.config.CF_ZONE_ID || (await CFAPI.getZoneByName(json.fqdn));
+            zone_id = tok_parts.aud || DNS01CF.config.CF_ZONE_ID || (await CFAPI.getZoneByName(json.fqdn)).id;
           } catch (e) {
             return dns01cfError(`Unable to list zones: ${e.message}`, { status: 500 });
           }
@@ -848,7 +848,7 @@ class Listener {
       // Get CloudFlare Zone ID
       let zone_id;
       try {
-        zone_id = tok_parts.aud || DNS01CF.config.CF_ZONE_ID || (await CFAPI.getZoneByName(json.subdomain));
+        zone_id = tok_parts.aud || DNS01CF.config.CF_ZONE_ID || ((await CFAPI.getZoneByName(json.subdomain)).id);
       } catch (e) {
         return dns01cfError(`Unable to list zones: ${e.message}`, { status: 500 });
       }
@@ -862,12 +862,18 @@ class Listener {
       try {
         actres = await CFAPI.setRecord(zone_id, json.subdomain, json.txt);
       } catch (e) {
-        return dns01cfError(`Error during DNS update: ${e.message}`, { status: 500 });
+        if (e.message.includes("An identical record already exists")) {
+          // it's a duplicate, so we'll just return success
+          actres = { message: e.message };
+        } else {
+          return dns01cfError(`Error during DNS update: ${e.message}`, { status: 500 });
+        }
       }
       return dns01cfResponse(
         {
           result: "ok",
           message: `'${json.subdomain}' set to value '${json.txt}'`,
+          acmedns_success_msg: `${json.txt}`,
           response: actres,
         },
         { status: 200 },
