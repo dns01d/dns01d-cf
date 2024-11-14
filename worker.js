@@ -392,7 +392,7 @@ class CFAPI {
   static async getZoneByName(name, exactMatch = false) {
     const zones = await CFAPI.listZones();
     for (let zone of zones) {
-      if ((exactMatch && name === zone.name) || !exactMatch || name.endsWith(zone.name))
+      if ((exactMatch && name === zone.name) || (!exactMatch && name.endsWith(zone.name)))
         return { id: zone.id, name: zone.name };
     }
     return null;
